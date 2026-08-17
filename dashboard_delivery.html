@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Delivery — Food Delivery Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; }
+  .header { background:linear-gradient(135deg,#1e293b,#334155); padding:32px 40px; border-bottom:2px solid #f59e0b; }
+  .header h1 { font-size:28px; font-weight:700; color:#fff; }
+  .header p { color:#94a3b8; margin-top:4px; font-size:14px; }
+  .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; padding:24px 40px; }
+  .kpi { background:#1e293b; border-radius:12px; padding:20px; border:1px solid #334155; }
+  .kpi .label { font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; }
+  .kpi .value { font-size:28px; font-weight:700; margin-top:4px; }
+  .kpi .sub { font-size:12px; color:#64748b; margin-top:2px; }
+  .green { color:#10b981; } .blue { color:#3b82f6; } .amber { color:#f59e0b; }
+  .purple { color:#a78bfa; } .red { color:#ef4444; } .cyan { color:#06b6d4; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:0 40px 24px; }
+  .full { grid-column:1/-1; }
+  .card { background:#1e293b; border-radius:12px; padding:24px; border:1px solid #334155; }
+  .card h3 { font-size:16px; font-weight:600; margin-bottom:16px; color:#cbd5e1; }
+  canvas { max-height:320px; }
+  .insight-box { background:#1e1b4b; border:1px solid #4338ca; border-radius:8px; padding:16px; margin-top:12px; }
+  .insight-box h4 { color:#818cf8; font-size:13px; margin-bottom:8px; }
+  .insight-box ul { list-style:none; padding:0; }
+  .insight-box li { font-size:13px; color:#c7d2fe; margin-bottom:6px; padding-left:16px; position:relative; }
+  .insight-box li::before { content:"→"; position:absolute; left:0; color:#818cf8; }
+  .footer { text-align:center; padding:24px; color:#475569; font-size:12px; border-top:1px solid #1e293b; }
+  @media(max-width:768px) { .grid { grid-template-columns:1fr; padding:0 16px 16px; } .kpi-row { padding:16px; } .header { padding:20px 16px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🛵 Dashboard de Delivery — Food Delivery Analysis</h1>
+  <p>Análise operacional de entregas · Dataset: Food Delivery (43.685 pedidos, Mar-Abr 2022, Índia)</p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="label">Total de Pedidos</div><div class="value blue">42,548</div><div class="sub">entregas realizadas</div></div>
+  <div class="kpi"><div class="label">Entregadores</div><div class="value purple">1,320</div><div class="sub">ativos no período</div></div>
+  <div class="kpi"><div class="label">Tempo Médio</div><div class="value amber">26.4 min</div><div class="sub">da ordem ao cliente</div></div>
+  <div class="kpi"><div class="label">Rating Médio</div><div class="value green">4.63 ⭐</div><div class="sub">dos entregadores</div></div>
+  <div class="kpi"><div class="label">Distância Média</div><div class="value cyan">38.0 km</div><div class="sub">por entrega</div></div>
+</div>
+
+<div class="grid">
+  <div class="card full">
+    <h3>📈 Tendência Mensal de Pedidos</h3>
+    <canvas id="monthlyChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Volume de pedidos cresce mês a mês — operação em expansão.</li>
+      <li>Abril registra o maior volume — possível sazonalidade ou promoções.</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <h3>🚦 Tempo de Entrega por Tráfego</h3>
+    <canvas id="trafficChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Congestionamento (Jam) adiciona ~10 min ao tempo de entrega vs tráfego baixo.</li>
+      <li>Recomendação: priorizar rotas alternativas em horários de pico.</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <h3>🌦️ Tempo de Entrega por Clima</h3>
+    <canvas id="weatherChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Neblina (Fog) é a pior condição — adiciona ~7 min comparado a dias ensolarados.</li>
+      <li>Dias de sol têm o melhor tempo de entrega (21.9 min).</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <h3>🍔 Distribuição por Tipo de Pedido</h3>
+    <canvas id="orderTypeChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Distribuição equilibrada entre os 4 tipos — sem concentração de risco.</li>
+      <li>Snacks lideram levemente — pedidos rápidos e de menor valor.</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <h3>🏍️ Distribuição por Veículo</h3>
+    <canvas id="vehicleChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Motos dominam (60%) — mais ágeis no trânsito indiano.</li>
+      <li>Scooters elétricas ainda são 8% — oportunidade de sustentabilidade.</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <h3>🎉 Impacto de Festivais no Tempo de Entrega</h3>
+    <canvas id="festivalChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Festivais DOBRAM o tempo de entrega (45.5 min vs 26.1 min)!</li>
+      <li>Recomendação: escalar entregadores extras em datas festivas.</li>
+    </ul></div>
+  </div>
+
+  <div class="card">
+    <h3>📅 Pedidos por Dia da Semana</h3>
+    <canvas id="dayChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Distribuição relativamente uniforme ao longo da semana.</li>
+      <li>Fins de semana não apresentam pico significativo.</li>
+    </ul></div>
+  </div>
+
+  <div class="card full">
+    <h3>🏙️ Tempo Médio por Cidade × Tráfego (Heatmap)</h3>
+    <canvas id="cityChart"></canvas>
+    <div class="insight-box"><h4>💡 Insight</h4><ul>
+      <li>Semi-Urban tem os maiores tempos (~50 min) — distâncias maiores.</li>
+      <li>Urban tem os menores tempos (~23 min) — infraestrutura melhor e menor distância.</li>
+      <li>Metropolitana sofre mais com congestionamento — tempo salta de 22 min (Low) para 32 min (Jam).</li>
+    </ul></div>
+  </div>
+</div>
+
+<div style="padding:0 40px 24px;">
+  <div class="card">
+    <h3>🗃️ Fórmulas DAX para Power BI</h3>
+    <div style="display:grid; gap:16px;">
+      <details><summary style="cursor:pointer; color:#f59e0b; font-weight:600;">1. Tempo Médio de Entrega</summary>
+        <pre style="background:#0f172a; padding:12px; border-radius:8px; color:#a5f3fc; font-size:13px; margin-top:8px;">
+Tempo Medio = AVERAGE(delivery[Time_taken_min])</pre></details>
+      <details><summary style="cursor:pointer; color:#f59e0b; font-weight:600;">2. Rating Médio</summary>
+        <pre style="background:#0f172a; padding:12px; border-radius:8px; color:#a5f3fc; font-size:13px; margin-top:8px;">
+Rating Medio = AVERAGE(delivery[Delivery_person_Ratings])</pre></details>
+      <details><summary style="cursor:pointer; color:#f59e0b; font-weight:600;">3. Total de Pedidos</summary>
+        <pre style="background:#0f172a; padding:12px; border-radius:8px; color:#a5f3fc; font-size:13px; margin-top:8px;">
+Total Pedidos = COUNTROWS(delivery)</pre></details>
+      <details><summary style="cursor:pointer; color:#f59e0b; font-weight:600;">4. % Entregas em Festival</summary>
+        <pre style="background:#0f172a; padding:12px; border-radius:8px; color:#a5f3fc; font-size:13px; margin-top:8px;">
+% Festival = DIVIDE(
+    CALCULATE(COUNTROWS(delivery), delivery[Festival] = "Yes"),
+    COUNTROWS(delivery)
+)</pre></details>
+      <details><summary style="cursor:pointer; color:#f59e0b; font-weight:600;">5. Distância Média (km)</summary>
+        <pre style="background:#0f172a; padding:12px; border-radius:8px; color:#a5f3fc; font-size:13px; margin-top:8px;">
+Distancia Media =
+AVERAGE(
+    SQRT(
+        POWER(delivery[Restaurant_latitude] - delivery[Delivery_location_latitude], 2) +
+        POWER(delivery[Restaurant_longitude] - delivery[Delivery_location_longitude], 2)
+    ) * 111
+)</pre></details>
+      <details><summary style="cursor:pointer; color:#f59e0b; font-weight:600;">6. Tempo Festival vs Normal</summary>
+        <pre style="background:#0f172a; padding:12px; border-radius:8px; color:#a5f3fc; font-size:13px; margin-top:8px;">
+Tempo Festival =
+CALCULATE(AVERAGE(delivery[Time_taken_min]), delivery[Festival] = "Yes")
+
+Tempo Normal =
+CALCULATE(AVERAGE(delivery[Time_taken_min]), delivery[Festival] = "No")
+
+Impacto Festival = [Tempo Festival] - [Tempo Normal]</pre></details>
+    </div>
+  </div>
+</div>
+
+<div class="footer">Portfólio Data Analyst · Projeto 3: Dashboard de Delivery · Dataset: Food Delivery India · Power BI + Chart.js</div>
+
+<script>
+Chart.defaults.color='#94a3b8';
+Chart.defaults.borderColor='#334155';
+
+new Chart(document.getElementById('monthlyChart'), {
+  type:'line',
+  data:{ labels:["2022-02", "2022-03", "2022-04"], datasets:[{ label:'Pedidos', data:[6762, 29849, 5937], borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)', fill:true, tension:0.3, pointRadius:4 }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } } }
+});
+
+new Chart(document.getElementById('trafficChart'), {
+  type:'bar',
+  data:{ labels:["Low", "Medium", "High", "Jam"], datasets:[{ label:'Tempo (min)', data:[21.4, 26.8, 27.3, 31.3], backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444'] }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } }
+});
+
+new Chart(document.getElementById('weatherChart'), {
+  type:'bar',
+  data:{ labels:["Fog", "Cloudy", "Windy", "Stormy", "Sandstorms", "Sunny"], datasets:[{ label:'Tempo (min)', data:[29.1, 29.0, 26.2, 26.0, 26.0, 21.9], backgroundColor:'#8b5cf6' }] },
+  options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } } }
+});
+
+new Chart(document.getElementById('orderTypeChart'), {
+  type:'doughnut',
+  data:{ labels:["Snack", "Meal", "Drinks", "Buffet"], datasets:[{ data:[10725, 10715, 10588, 10520], backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444'] }] },
+  options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } }
+});
+
+new Chart(document.getElementById('vehicleChart'), {
+  type:'bar',
+  data:{ labels:["motorcycle", "scooter", "electric_scooter", "bicycle"], datasets:[{ label:'Entregas', data:[24889, 14179, 3465, 15], backgroundColor:['#2563eb','#06b6d4','#10b981','#a78bfa'] }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } } }
+});
+
+new Chart(document.getElementById('festivalChart'), {
+  type:'bar',
+  data:{ labels:["No", "Yes"], datasets:[{ label:'Tempo (min)', data:[26.1, 45.5], backgroundColor:['#10b981','#ef4444'] }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } }
+});
+
+new Chart(document.getElementById('dayChart'), {
+  type:'bar',
+  data:{ labels:["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], datasets:[{ label:'Pedidos', data:[5784, 5939, 6642, 5936, 6555, 5865, 5827], backgroundColor:'#06b6d4' }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } } }
+});
+
+new Chart(document.getElementById('cityChart'), {
+  type:'bar',
+  data:{ labels:["Metropolitian", "Semi-Urban", "Urban"], datasets:[{ label:'Tempo Médio (min)', data:[27.3, 49.7, 23.0], backgroundColor:['#3b82f6','#f59e0b','#10b981'] }] },
+  options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } }
+});
+</script>
+</body>
+</html>
